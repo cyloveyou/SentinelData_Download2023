@@ -5,153 +5,165 @@
 
 import multiprocessing
 import os
+import random
 import re
+import time
 
 import requests
-from tqdm import tqdm
-
-proxies = {
-	"http": "替换位置一:替换位置二",
-	"https": "替换位置一:替换位置二"
-}  # todo 设置代理
+from tqdm import tqdm, trange
 
 
 class SentinelDownload:
-	@staticmethod
-	def CreatURL(urlStr: str) -> str:
+	def __init__(self, UserName, Password, SearchUrl, Proxies):
+		self.userName = UserName  # 用户名
+		self.password = Password  # 密码
+		self.SearchUrl = self.CreatURL(SearchUrl)  # 构造检索url
+		self.proxies = Proxies  # 代理
+
+		self.tokenStr = self.GetAccessToken()  # 获取token
+		self.SearchResList = self.Search()  # 检索数据
+
+	def CreatURL(self, urlStr: str) -> str:
 		return urlStr.strip()
 
-	@staticmethod
-	def GetAccessToken(username: str, password: str) -> str:
+	def GetAccessToken(self) -> str:
 		"""
 		获取token,用于下载数据
-		:param username: 用户名
-		:param password: 密码
 		:return:
 		"""
 		data = {
 			"client_id": "cdse-public",
-			"username": username,
-			"password": password,
+			"username": self.userName,
+			"password": self.password,
 			"grant_type": "password",
 		}
 		try:
 			r = requests.post("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
-							  data=data, proxies=proxies)
+							  data=data, proxies=self.proxies)
 			r.raise_for_status()
 		except Exception as e:
-			raise Exception(f"Access token creation failed. Reponse from the server was: {r.json()}")
+			raise Exception(f"Access token creation failed.")
 		print("token获取成功！")
 		return r.json()["access_token"]
 
-	@staticmethod
-	def Search(SearchURL: str) -> list:
+	def Search(self) -> list:
 		"""
 		检索数据
-		:param SearchURL:构造的检索URL
-		:return:
 		"""
-		resDf = []
-		jsonInfo = requests.get(SearchURL, proxies=proxies).json()
-		n = jsonInfo["@odata.count"]
+		SearchResult = []
+		res = requests.get(self.SearchUrl, proxies=self.proxies)
+		jsonInfo = res.json()
+		res.close()  # 关闭连接
+		n = jsonInfo["@odata.count"]  # 检索到的数据总数
 		if n == 0:
 			print("没有检索到数据")
 		else:
-			print(f"共检索到{n}条数据")
-			for k in range(0, n, 900):
-				print(f"正在进行第{k}次数据信息的检索")
-				top = re.findall("(top=\d+)", SearchURL)[0]
-				skip = re.findall("(skip=\d+)", SearchURL)[0]
-				url = SearchURL.replace(top, f"top={900}").replace(skip, f"skip={k}")  # 修正url
+			print(f"共检索到{n}条数据，开始进行数据信息的采集")
+			r = 900  # 单次采集条数，在1-1000之间
+			for k in range(0, n, r):
+				print(f"正在进行第{k}-{k + r}数据信息的采集")
+				top = re.findall(r"(top=\d+)", self.SearchUrl)[0]
+				skip = re.findall(r"(skip=\d+)", self.SearchUrl)[0]
+				url = self.SearchUrl.replace(top, f"top={900}").replace(skip, f"skip={k}")  # 修正url
 				jsonInfo = requests.get(url, proxies=proxies).json()
-				resDf += [{"Id": i["Id"], "Name": i["Name"]} for i in jsonInfo['value']]
-		return resDf
+				SearchResult += [{"Id": i["Id"], "Name": i["Name"]} for i in jsonInfo['value']]
+		# 检索数据
+		print(f"数据采集完成，共采集到{len(SearchResult)}条数据信息")
+		return SearchResult
 
-	@staticmethod
-	def Download1(DownloadInfo: list):
+	def Download1(self, DownloadInfo: list):
 		"""
-		单个数据文件的下载
-		:param DownloadInfo:(tokenStr, productID, savePath)
+		单个数据文件的下载，如果文件存在，则返回
+		:param DownloadInfo:(productID, savePath)
 		:return:
 		"""
-		tokenStr, productID, savePath = DownloadInfo
+		productID, savePath = DownloadInfo
+		time.sleep(random.uniform(0, 3))
+		if os.path.exists(f'{savePath}.zip'):
+			print(f"{savePath}.zip 已经存在，跳过下载")
+			return
 		url = f"http://zipper.dataspace.copernicus.eu/odata/v1/Products({productID})/$value"
-		headers = {"Authorization": f"Bearer {tokenStr}"}  # 设置token
-		response = requests.get(url, headers=headers, stream=True, proxies=proxies, timeout=10)
-		if response.status_code == 200:
-			data_size = round(float(response.headers['Content-Length'])) / 1024 / 1024
-			print()
-			with open(f'{savePath}.zip', 'wb') as f:
-				for data in tqdm(iterable=response.iter_content(1024 * 1024), total=int(data_size), desc=f'{savePath}',
-								 unit='MB'):
-					f.write(data)
-		else:
-			print(response.text)
-			raise Exception(f"Download failed. Response from the server was: {response.text}")
+		headers = {"Authorization": f"Bearer {self.tokenStr}"}  # 设置token
+		try:
+			response = requests.get(url, headers=headers, stream=True, proxies=self.proxies, timeout=10)
+			if response.status_code == 200:
+				data_size = round(float(response.headers['Content-Length'])) / 1024 / 1024
 
-	@staticmethod
-	def DownloadMain(DownloadInfoS: list, token, saveFolder):
+				with open(f'{savePath}.zip', 'wb') as f:
+					for data in tqdm(iterable=response.iter_content(1024 * 1024), total=int(data_size),
+									 desc=f'{savePath}.zip', unit='MB'):
+						f.write(data)
+				print(f"{savePath}下载完成")
+				response.close()  # 关闭连接
+			else:
+				print("响应文本:", response.text)
+				print("状态码:", response.status_code)
+				print("请求地址:", response.url)
+				raise Exception(f"Download failed. Response from the server was: {response.text}")
+		except:
+			t = random.randint(20, 60)
+			print(f"{savePath}下载失败,尝试更新token并等待{t}s...")
+			for _ in trange(t):
+				time.sleep(1)
+
+			self.tokenStr = self.GetAccessToken()
+			self.Download1(DownloadInfo)
+
+	def SingleDownload(self, saveFolder):
 		"""
 		单线程下载数据
-		:param DownloadInfoS:
-		:param token:
+		"""
+		print(f"开始进行单线程数据的下载...")
+		# 创建一个合适的路径
+		if not os.path.exists(saveFolder):
+			os.makedirs(saveFolder)
+		# 循环下载
+		for i in range(len(self.SearchResList)):
+			ID = self.SearchResList[i]['Id']
+			Name = self.SearchResList[i]['Name']
+			savePath = f"{saveFolder}/{Name}"
+
+			InfoLi = [ID, savePath]
+			self.Download1(InfoLi)
+
+	def MultiDownload(self, saveFolder: str, poolNum: int = 2) -> None:
+		"""
+		多线程下载数据
+		:param poolNum:
 		:param saveFolder:
 		:return:
 		"""
-		# 循环下载
-		for i in range(len(DownloadInfoS)):
-			ID = DownloadInfoS[i]['Id']
-			Name = DownloadInfoS[i]['Name']
-			savePath = f"{saveFolder}/{Name}"
-			InfoLi = [token, ID, savePath]
-			try:
-				SentinelDownload.Download1(InfoLi)
-			except:
-				print(f"{Name}下载失败,尝试更新token")
-				SentinelDownload.Download1(InfoLi)
-				continue
-
-	@staticmethod
-	def MultiDownload(DownloadInfoS: list, tokenStr: str, Folder: str):
-		"""
-		多线程下载数据
-		:param DownloadInfoS:
-		:param tokenStr:
-		:param Folder:
-		:return:
-		"""
+		print(f"开始进行多线程数据的下载,线程数为{poolNum}...")
 		Li = []
-		for i in range(len(DownloadInfoS)):
-			ID = DownloadInfoS[i]['Id']
-			Name = DownloadInfoS[i]['Name']
-			savePath = f"{Folder}/{Name}"
-			InfoLi = [tokenStr, ID, savePath]
+		for i in range(len(self.SearchResList)):
+			ID = self.SearchResList[i]['Id']
+			Name = self.SearchResList[i]['Name']
+
+			savePath = f"{saveFolder}/{Name}"
+			InfoLi = [ID, savePath]
 			Li.append(InfoLi)
-		pool = multiprocessing.Pool(2)  # 可以设置线程数，不宜过大
-		pool.map(SentinelDownload.Download1, Li)
+
+		pool = multiprocessing.Pool(poolNum)  # 可以设置线程数，不宜过大
+		pool.map(self.Download1, Li)
 
 
 if __name__ == '__main__':
-
 	# todo 设置参数
-	Folder = r"./SentinelTest"  # todo 保存路径
-	userName = "xxxxxxx"  # todo 用户名
-	password = "xxxxxxx"  # todo 密码
+	IPPort = "替换位置一:替换位置二"  # todo 设置代理
 
+	Folder = r"./SentinelTest"  # todo 保存路径
+	userName = "xxxxxx"  # todo 用户名
+	password = "xxxxxx"  # todo 密码
+
+	proxies = {
+		"http": IPPort,
+		"https": IPPort
+	}
+	# 读取urlString
 	with open("SearchURL.txt", mode="r") as f:
 		urlString = f.read()  # 网页获取的url,顾及到url过长，故存放在txt文件中
 
-	if not os.path.exists(Folder):
-		os.makedirs(Folder)
-
-	# 检索数据
-	url = SentinelDownload.CreatURL(urlString)
-	dataInfo = SentinelDownload.Search(url)
-	print("检索完成，共检索到%d条数据信息" % len(dataInfo))
-
-	# 获取token
-	tokenStr = SentinelDownload.GetAccessToken(username=userName, password=password)
-
+	# 初始化配置
+	SL = SentinelDownload(UserName=userName, Password=password, Proxies=proxies, SearchUrl=urlString)
 	# 下载数据
-	# SentinelDownload.DownloadMain(DownloadInfoS=dataInfo, token=tokenStr, saveFolder=Folder)  # 单一进程下载
-	SentinelDownload.MultiDownload(DownloadInfoS=dataInfo, tokenStr=tokenStr, Folder=Folder)  # 多进程下载
+	SL.MultiDownload(saveFolder=Folder)
