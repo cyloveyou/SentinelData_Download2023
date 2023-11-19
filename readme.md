@@ -60,9 +60,9 @@
 
 ![image-20231119202631799](https://markdownf.oss-cn-shanghai.aliyuncs.com/mdimg/202311192026840.png)
 
-至此完成所有设置，执行python脚本即可，可以Pycharm里面执行，也可以命令行执行，下面展示Pycharm执行的效果
+至此完成所有设置，执行python脚本即可进行下载，需要注意的是：正在下载的文件会在Temp文件夹中存在，下载完毕的文件会移动到Finish文件夹中，Finish中已经存在的文件不会进行二次下载，可以Pycharm里面执行，也可以命令行执行，下面展示Pycharm执行的效果:
 
-![image-20231119202414124](https://markdownf.oss-cn-shanghai.aliyuncs.com/mdimg/202311192024284.png)
+![image-20231119215302326](https://markdownf.oss-cn-shanghai.aliyuncs.com/mdimg/202311192153412.png)
 
 ---
 

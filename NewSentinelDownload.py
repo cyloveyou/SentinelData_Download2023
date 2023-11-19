@@ -7,6 +7,7 @@ import multiprocessing
 import os
 import random
 import re
+import shutil
 import time
 
 import requests
@@ -74,10 +75,10 @@ class SentinelDownload:
 	def Download1(self, DownloadInfo: list):
 		"""
 		单个数据文件的下载，如果文件存在，则返回
-		:param DownloadInfo:(productID, savePath)
+		:param DownloadInfo:(productID, savePath,tempPath)
 		:return:
 		"""
-		productID, savePath = DownloadInfo
+		productID, savePath,tempPath = DownloadInfo
 		time.sleep(random.uniform(0, 3))
 		if os.path.exists(f'{savePath}.zip'):
 			print(f"{savePath}.zip 已经存在，跳过下载")
@@ -89,20 +90,24 @@ class SentinelDownload:
 			if response.status_code == 200:
 				data_size = round(float(response.headers['Content-Length'])) / 1024 / 1024
 
-				with open(f'{savePath}.zip', 'wb') as f:
+				with open(f'{tempPath}.zip', 'wb') as f:
 					for data in tqdm(iterable=response.iter_content(1024 * 1024), total=int(data_size),
-									 desc=f'{savePath}.zip', unit='MB'):
+									 desc=f'{tempPath}.zip', unit='MB'):
 						f.write(data)
-				print(f"{savePath}下载完成")
+				shutil.move(f'{tempPath}.zip', f'{savePath}.zip')
+				print(f"{savePath}.zip下载完成")
 				response.close()  # 关闭连接
 			else:
 				print("响应文本:", response.text)
 				print("状态码:", response.status_code)
 				print("请求地址:", response.url)
 				raise Exception(f"Download failed. Response from the server was: {response.text}")
-		except:
+		except Exception as e:
+			print("捕获到异常:", e)
+			if os.path.exists(f'{savePath}.zip'):
+				os.remove(f'{savePath}.zip')
 			t = random.randint(20, 60)
-			print(f"{savePath}下载失败,尝试更新token并等待{t}s...")
+			print(f"{savePath}下载失败,尝试更新token并等待{t}s,随后重新下载...")
 			for _ in trange(t):
 				time.sleep(1)
 
@@ -115,15 +120,18 @@ class SentinelDownload:
 		"""
 		print(f"开始进行单线程数据的下载...")
 		# 创建一个合适的路径
-		if not os.path.exists(saveFolder):
-			os.makedirs(saveFolder)
+		if not os.path.exists(f"{saveFolder}/Finish"):
+			os.makedirs(f"{saveFolder}/Finish")
+		if not os.path.exists(f"{saveFolder}/Temp"):
+			os.makedirs(f"{saveFolder}/Temp")
 		# 循环下载
 		for i in range(len(self.SearchResList)):
 			ID = self.SearchResList[i]['Id']
 			Name = self.SearchResList[i]['Name']
-			savePath = f"{saveFolder}/{Name}"
+			savePath = f"{saveFolder}/Finish/{Name}"
+			tempPath = f"{saveFolder}/Temp/{Name}"
 
-			InfoLi = [ID, savePath]
+			InfoLi = [ID, savePath, tempPath]
 			self.Download1(InfoLi)
 
 	def MultiDownload(self, saveFolder: str, poolNum: int = 2) -> None:
@@ -134,13 +142,21 @@ class SentinelDownload:
 		:return:
 		"""
 		print(f"开始进行多线程数据的下载,线程数为{poolNum}...")
+
+		if not os.path.exists(f"{saveFolder}/Finish"):
+			os.makedirs(f"{saveFolder}/Finish")
+		if not os.path.exists(f"{saveFolder}/Temp"):
+			os.makedirs(f"{saveFolder}/Temp")
+
 		Li = []
 		for i in range(len(self.SearchResList)):
 			ID = self.SearchResList[i]['Id']
 			Name = self.SearchResList[i]['Name']
 
-			savePath = f"{saveFolder}/{Name}"
-			InfoLi = [ID, savePath]
+			savePath = f"{saveFolder}/Finish/{Name}"
+			tempPath = f"{saveFolder}/Temp/{Name}"
+
+			InfoLi = [ID, savePath, tempPath]
 			Li.append(InfoLi)
 
 		pool = multiprocessing.Pool(poolNum)  # 可以设置线程数，不宜过大
@@ -166,4 +182,5 @@ if __name__ == '__main__':
 	# 初始化配置
 	SL = SentinelDownload(UserName=userName, Password=password, Proxies=proxies, SearchUrl=urlString)
 	# 下载数据
-	SL.MultiDownload(saveFolder=Folder)
+	SL.MultiDownload(saveFolder=Folder)  # 多进程
+# SL.SingleDownload(saveFolder=Folder)  # 单线程
