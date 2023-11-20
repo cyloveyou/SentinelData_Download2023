@@ -109,6 +109,9 @@ class SentinelDownload:
 				print(f"{savePath}下载失败,尝试更新token并等待{t}s,随后重新下载...")
 				for _ in trange(t):
 					time.sleep(1)
+
+				self.tokenStr = self.GetAccessToken()
+				self.Download1(DownloadInfo)
 		except Exception as e:
 			print("捕获到异常:", e)
 			if os.path.exists(f'{savePath}.zip'):
