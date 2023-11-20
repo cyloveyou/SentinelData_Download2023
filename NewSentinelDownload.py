@@ -41,11 +41,15 @@ class SentinelDownload:
 		try:
 			r = requests.post("https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token",
 							  data=data, proxies=self.proxies)
-			r.raise_for_status()
+			print("token获取成功！")
+			return r.json()["access_token"]
 		except Exception as e:
-			raise Exception(f"Access token creation failed.")
-		print("token获取成功！")
-		return r.json()["access_token"]
+			print(f"获取token时捕获到异常{e}")
+			t = random.randint(20, 60)
+			print(f"Access token creation failed. 等待{t}s,随后重新获取token...")
+			for _ in trange(t):
+				time.sleep(1)
+			self.GetAccessToken()
 
 	def Search(self) -> list:
 		"""
@@ -78,7 +82,7 @@ class SentinelDownload:
 		:param DownloadInfo:(productID, savePath,tempPath)
 		:return:
 		"""
-		productID, savePath,tempPath = DownloadInfo
+		productID, savePath, tempPath = DownloadInfo
 		time.sleep(random.uniform(0, 3))
 		if os.path.exists(f'{savePath}.zip'):
 			print(f"{savePath}.zip 已经存在，跳过下载")
@@ -98,10 +102,13 @@ class SentinelDownload:
 				print(f"{savePath}.zip下载完成")
 				response.close()  # 关闭连接
 			else:
-				print("响应文本:", response.text)
-				print("状态码:", response.status_code)
-				print("请求地址:", response.url)
-				raise Exception(f"Download failed. Response from the server was: {response.text}")
+				print(f"响应状态码错误{response.status_code},返回内容：{response.text}")
+				if os.path.exists(f'{savePath}.zip'):
+					os.remove(f'{savePath}.zip')
+				t = random.randint(20, 60)
+				print(f"{savePath}下载失败,尝试更新token并等待{t}s,随后重新下载...")
+				for _ in trange(t):
+					time.sleep(1)
 		except Exception as e:
 			print("捕获到异常:", e)
 			if os.path.exists(f'{savePath}.zip'):
