@@ -32,7 +32,7 @@
    ![image-20231118151450498](https://markdownf.oss-cn-shanghai.aliyuncs.com/mdimg/202311181514712.png)
 2. 鼠标右键打开开发者模式(检查)，按下图操作
    ![image-20231118151722972](https://markdownf.oss-cn-shanghai.aliyuncs.com/mdimg/202311181517068.png)
-3. 根据下图找到检索URL，将内容复制到SearchURL.txt文件中，脚本将对左侧所有检索结果（不仅仅是显示的50条，包括未显示的Load more）进行批量下载。![image-20231118151919918](https://markdownf.oss-cn-shanghai.aliyuncs.com/mdimg/202311181519016.png)
+3. 根据下图找到检索URL，将内容复制到SearchURL.txt文件中，脚本将对左侧所有检索结果（不仅仅是显示的50条，包括未显示的Load more）进行批量下载。![image-20231118151919918](https://mmbiz.qpic.cn/mmbiz_png/OTZgt9MuxqeNGKjz4wGrF4gvqMmIEgJLgR7KE0KadNs6UoTV0orsJOGf2FibXQalicYPAswCMNh8h8fQUru9fQeQ/640?wx_fmt=png&from=appmsg)
 4. 至此，SearchURL设置完成。
 
 ### 设置本地代理
