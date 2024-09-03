@@ -45,7 +45,8 @@ class SentinelDownload:
 			return r.json()["access_token"]
 		except Exception as e:
 			print(f"获取token时捕获到异常{e}")
-			t = random.randint(20, 60)
+			# t = random.randint(20, 60)
+			t = 15 # 修改为15秒,等半分钟也太折磨了
 			print(f"Access token creation failed. 等待{t}s,随后重新获取token...")
 			for _ in trange(t):
 				time.sleep(1)
@@ -70,7 +71,7 @@ class SentinelDownload:
 				top = re.findall(r"(top=\d+)", self.SearchUrl)[0]
 				skip = re.findall(r"(skip=\d+)", self.SearchUrl)[0]
 				url = self.SearchUrl.replace(top, f"top={900}").replace(skip, f"skip={k}")  # 修正url
-				jsonInfo = requests.get(url, proxies=proxies).json()
+				jsonInfo = requests.get(url, proxies=self.proxies).json() # 捉虫
 				SearchResult += [{"Id": i["Id"], "Name": i["Name"]} for i in jsonInfo['value']]
 		# 检索数据
 		print(f"数据采集完成，共采集到{len(SearchResult)}条数据信息")
