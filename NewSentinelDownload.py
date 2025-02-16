@@ -16,7 +16,7 @@ from tqdm import tqdm, trange
 
 class SentinelDownload:
 	def __init__(self, UserName, Password, SearchUrl, Proxies):
-		self.userName = UserName  # 用户名
+		self.userName = UserName  # 用户名（应该是登录官网的邮箱）
 		self.password = Password  # 密码
 		self.SearchUrl = self.CreatURL(SearchUrl)  # 构造检索url
 		self.proxies = Proxies  # 代理
