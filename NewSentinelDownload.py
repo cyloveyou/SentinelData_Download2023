@@ -15,11 +15,11 @@ from tqdm import tqdm, trange
 
 
 class SentinelDownload:
-    def __init__(self, UserName, Password, SearchUrl, Proxies):
-        self.userName = UserName  # 用户名
-        self.password = Password  # 密码
-        self.SearchUrl = self.CreatURL(SearchUrl)  # 构造检索url
-        self.proxies = Proxies  # 代理
+	def __init__(self, UserName, Password, SearchUrl, Proxies):
+		self.userName = UserName  # 用户名（应该是登录官网的邮箱）
+		self.password = Password  # 密码
+		self.SearchUrl = self.CreatURL(SearchUrl)  # 构造检索url
+		self.proxies = Proxies  # 代理
 
         self.tokenStr = self.GetAccessToken()  # 获取token
         self.SearchResList = self.Search()  # 检索数据
@@ -48,40 +48,37 @@ class SentinelDownload:
             return r.json()["access_token"]
         except Exception as e:
             print(f"获取token时捕获到异常{e}")
-            t = random.randint(20, 60)
+            # t = random.randint(20, 60)
+			t = 15 # 修改为15秒,等半分钟也太折磨了
             print(f"Access token creation failed. 等待{t}s,随后重新获取token...")
             for _ in trange(t):
                 time.sleep(1)
             self.GetAccessToken()
 
-    def Search(self) -> list:
-        """
-        检索数据
-        """
-        SearchResult = []
-        res = requests.get(self.SearchUrl, proxies=self.proxies)
-        jsonInfo = res.json()
-        res.close()  # 关闭连接
-        n = jsonInfo["@odata.count"]  # 检索到的数据总数
-        if n == 0:
-            print("没有检索到数据")
-        else:
-            print(f"共检索到{n}条数据，开始进行数据信息的采集")
-            r = 900  # 单次采集条数，在1-1000之间
-            for k in range(0, n, r):
-                print(f"正在进行第{k}-{k + r}数据信息的采集")
-                top = re.findall(r"(top=\d+)", self.SearchUrl)[0]
-                skip = re.findall(r"(skip=\d+)", self.SearchUrl)[0]
-                url = self.SearchUrl.replace(top, f"top={900}").replace(
-                    skip, f"skip={k}"
-                )  # 修正url
-                jsonInfo = requests.get(url, proxies=proxies).json()
-                SearchResult += [
-                    {"Id": i["Id"], "Name": i["Name"]} for i in jsonInfo["value"]
-                ]
-        # 检索数据
-        print(f"数据采集完成，共采集到{len(SearchResult)}条数据信息")
-        return SearchResult
+	def Search(self) -> list:
+		"""
+		检索数据
+		"""
+		SearchResult = []
+		res = requests.get(self.SearchUrl, proxies=self.proxies)
+		jsonInfo = res.json()
+		res.close()  # 关闭连接
+		n = jsonInfo["@odata.count"]  # 检索到的数据总数
+		if n == 0:
+			print("没有检索到数据")
+		else:
+			print(f"共检索到{n}条数据，开始进行数据信息的采集")
+			r = 900  # 单次采集条数，在1-1000之间
+			for k in range(0, n, r):
+				print(f"正在进行第{k}-{k + r}数据信息的采集")
+				top = re.findall(r"(top=\d+)", self.SearchUrl)[0]
+				skip = re.findall(r"(skip=\d+)", self.SearchUrl)[0]
+				url = self.SearchUrl.replace(top, f"top={900}").replace(skip, f"skip={k}")  # 修正url
+				jsonInfo = requests.get(url, proxies=self.proxies).json() # 捉虫
+				SearchResult += [{"Id": i["Id"], "Name": i["Name"]} for i in jsonInfo['value']]
+		# 检索数据
+		print(f"数据采集完成，共采集到{len(SearchResult)}条数据信息")
+		return SearchResult
 
     def Download1(self, DownloadInfo: list):
         """
