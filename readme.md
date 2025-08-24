@@ -13,7 +13,7 @@
 
 1. 脚本中主要包含一个SentinelDownload类用来组织各种下载函数，其具体包含有以下函数
    - CreatURL:构造检索URL
-   - GetAccessToken:根据用户名和密码获取token（下载文件时需要token+下载链接）
+   - GetAccessToken:根据用户名(登录的邮箱)和密码获取token（下载文件时需要token+下载链接）
    - Search:根据检索URL检索数据
    - Download1:单个数据文件的下载
    - SingleDownload:单一进程下载
