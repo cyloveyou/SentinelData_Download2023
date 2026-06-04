@@ -66,6 +66,18 @@
 
 ---
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=cyloveyou%2FSentinelData_Download2023&type=date&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=cyloveyou/SentinelData_Download2023&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=cyloveyou/SentinelData_Download2023&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=cyloveyou/SentinelData_Download2023&type=date&legend=top-left" />
+ </picture>
+</a>
+
+---
+
 ## 🌹结语
 
 1. 由于token具有有效期限约4h，目前脚本并未长时间下载，单对token过期做了一些处理，如有问题，欢迎邮箱私信。
