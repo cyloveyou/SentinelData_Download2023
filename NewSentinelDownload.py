@@ -95,7 +95,7 @@ class SentinelDownload:
         if os.path.exists(f"{savePath}.zip"):
             print(f"{savePath}.zip 已经存在，跳过下载")
             return
-        url = f"http://zipper.dataspace.copernicus.eu/odata/v1/Products({productID})/$value"
+        url = f"https://zipper.dataspace.copernicus.eu/odata/v1/Products({productID})/$value"
         headers = {"Authorization": f"Bearer {self.tokenStr}"}  # 设置token
         try:
             response = requests.get(
